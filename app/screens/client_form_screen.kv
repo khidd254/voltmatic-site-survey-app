@@ -1,0 +1,113 @@
+<ClientFormScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        spacing: dp(15)
+        padding: dp(20)
+        
+        # Header
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(60)
+            spacing: dp(15)
+            
+            MDIconButton:
+                icon: "arrow-left"
+                theme_text_color: "Primary"
+                on_release: root.go_back()
+                size_hint: None, None
+                size: dp(40), dp(40)
+                pos_hint: {'center_y': 0.5}
+            
+            MDLabel:
+                text: "Add New Client" if not root.client_id else "Edit Client"
+                font_style: "H5"
+                theme_text_color: "Primary"
+                pos_hint: {'center_y': 0.5}
+        
+        ScrollView:
+            MDBoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(20)
+                padding: [0, dp(10), 0, dp(20)]
+                
+                # Client Information Section
+                MDCard:
+                    elevation: 3
+                    radius: [15]
+                    padding: dp(20)
+                    size_hint_y: None
+                    height: self.minimum_height + dp(40)
+                    
+                    MDBoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(15)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDLabel:
+                            text: "Client Information"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDTextField:
+                            id: name_field
+                            hint_text: "Full Name *"
+                            icon_right: "account"
+                            required: True
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: phone_field
+                            hint_text: "Phone Number *"
+                            icon_right: "phone"
+                            input_filter: "int"
+                            required: True
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: email_field
+                            hint_text: "Email Address"
+                            icon_right: "email"
+                            input_type: "mail"
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: address_field
+                            hint_text: "Physical Address"
+                            icon_right: "map-marker"
+                            multiline: True
+                            size_hint_y: None
+                            height: dp(80)
+                        
+                        MDTextField:
+                            id: notes_field
+                            hint_text: "Additional Notes"
+                            icon_right: "note-text"
+                            multiline: True
+                            size_hint_y: None
+                            height: dp(100)
+                
+                # Action Buttons
+                MDBoxLayout:
+                    size_hint_y: None
+                    height: dp(60)
+                    spacing: dp(15)
+                    
+                    MDRaisedButton:
+                        text: "Cancel"
+                        md_bg_color: 0.5, 0.5, 0.5, 1
+                        on_release: root.go_back()
+                        size_hint_x: 0.4
+                    
+                    MDRaisedButton:
+                        text: "Save Client"
+                        md_bg_color: app.theme_cls.primary_color
+                        on_release: root.save_client()
+                        size_hint_x: 0.6

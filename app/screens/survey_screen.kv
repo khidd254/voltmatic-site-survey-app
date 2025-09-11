@@ -1,0 +1,380 @@
+<SurveyScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        spacing: dp(10)
+        padding: dp(15)
+        
+        # Header
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(60)
+            spacing: dp(15)
+            
+            MDIconButton:
+                icon: "arrow-left"
+                theme_text_color: "Primary"
+                on_release: root.go_back()
+                size_hint: None, None
+                size: dp(40), dp(40)
+                pos_hint: {'center_y': 0.5}
+            
+            MDLabel:
+                text: "Site Survey"
+                font_style: "H5"
+                theme_text_color: "Primary"
+                pos_hint: {'center_y': 0.5}
+        
+        # Client info
+        MDLabel:
+            id: client_name
+            text: "Select a client to start survey"
+            font_style: "Subtitle1"
+            theme_text_color: "Secondary"
+            size_hint_y: None
+            height: dp(30)
+        
+        ScrollView:
+            MDBoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(20)
+                
+                # Survey Details
+                MDCard:
+                    elevation: 3
+                    radius: [15]
+                    padding: dp(20)
+                    size_hint_y: None
+                    height: self.minimum_height + dp(40)
+                    
+                    MDBoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(15)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDLabel:
+                            text: "Survey Information"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDTextField:
+                            id: surveyor_name_field
+                            hint_text: "Surveyor Name *"
+                            icon_right: "account"
+                            required: True
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: survey_date_field
+                            hint_text: "Survey Date & Time"
+                            icon_right: "clock"
+                            readonly: True
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: site_address_field
+                            hint_text: "Site Address"
+                            icon_right: "map-marker"
+                            multiline: True
+                            size_hint_y: None
+                            height: dp(80)
+                
+                # Property Information Section
+                MDCard:
+                    elevation: 2
+                    radius: [10]
+                    padding: dp(15)
+                    size_hint_y: None
+                    height: self.minimum_height + dp(30)
+                    
+                    MDBoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(10)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDLabel:
+                            text: "Property Information"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDTextField:
+                            id: property_type
+                            hint_text: "Property Type"
+                            icon_right: "menu-down"
+                            readonly: True
+                            on_focus: if self.focus: root.show_property_type_menu()
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: number_of_bedrooms
+                            hint_text: "Number of Bedrooms"
+                            icon_right: "bed"
+                            input_filter: "int"
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: number_of_lights
+                            hint_text: "Number of Lights"
+                            icon_right: "lightbulb"
+                            input_filter: "int"
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: roof_type
+                            hint_text: "Roof Type"
+                            icon_right: "menu-down"
+                            readonly: True
+                            on_focus: if self.focus: root.show_roof_type_menu()
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: kplc_availability
+                            hint_text: "KPLC Available"
+                            icon_right: "menu-down"
+                            readonly: True
+                            on_focus: if self.focus: root.show_kplc_menu()
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: system_type
+                            hint_text: "System Type"
+                            icon_right: "menu-down"
+                            readonly: True
+                            on_focus: if self.focus: root.show_system_type_menu()
+                            size_hint_y: None
+                            height: dp(50)
+                
+                # Appliances Section
+                MDCard:
+                    elevation: 2
+                    radius: [10]
+                    padding: dp(15)
+                    size_hint_y: None
+                    height: self.minimum_height + dp(30)
+                    
+                    MDBoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(10)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDLabel:
+                            text: "High Power Appliances"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDBoxLayout:
+                            orientation: 'vertical'
+                            spacing: dp(5)
+                            size_hint_y: None
+                            height: dp(200)
+                            
+                            MDBoxLayout:
+                                orientation: 'horizontal'
+                                spacing: dp(10)
+                                size_hint_y: None
+                                height: dp(40)
+                                
+                                MDCheckbox:
+                                    id: tv_checkbox
+                                    size_hint: None, None
+                                    size: dp(30), dp(30)
+                                
+                                MDLabel:
+                                    text: "TV"
+                                    theme_text_color: "Primary"
+                                    size_hint_y: None
+                                    height: dp(30)
+                            
+                            MDBoxLayout:
+                                orientation: 'horizontal'
+                                spacing: dp(10)
+                                size_hint_y: None
+                                height: dp(40)
+                                
+                                MDCheckbox:
+                                    id: refrigerator_checkbox
+                                    size_hint: None, None
+                                    size: dp(30), dp(30)
+                                
+                                MDLabel:
+                                    text: "Refrigerator"
+                                    theme_text_color: "Primary"
+                                    size_hint_y: None
+                                    height: dp(30)
+                            
+                            MDBoxLayout:
+                                orientation: 'horizontal'
+                                spacing: dp(10)
+                                size_hint_y: None
+                                height: dp(40)
+                                
+                                MDCheckbox:
+                                    id: ironbox_checkbox
+                                    size_hint: None, None
+                                    size: dp(30), dp(30)
+                                
+                                MDLabel:
+                                    text: "Ironbox"
+                                    theme_text_color: "Primary"
+                                    size_hint_y: None
+                                    height: dp(30)
+                            
+                            MDBoxLayout:
+                                orientation: 'horizontal'
+                                spacing: dp(10)
+                                size_hint_y: None
+                                height: dp(40)
+                                
+                                MDCheckbox:
+                                    id: microwave_checkbox
+                                    size_hint: None, None
+                                    size: dp(30), dp(30)
+                                
+                                MDLabel:
+                                    text: "Microwave"
+                                    theme_text_color: "Primary"
+                                    size_hint_y: None
+                                    height: dp(30)
+                            
+                            MDBoxLayout:
+                                orientation: 'horizontal'
+                                spacing: dp(10)
+                                size_hint_y: None
+                                height: dp(40)
+                                
+                                MDCheckbox:
+                                    id: ac_checkbox
+                                    size_hint: None, None
+                                    size: dp(30), dp(30)
+                                
+                                MDLabel:
+                                    text: "Air Conditioner"
+                                    theme_text_color: "Primary"
+                                    size_hint_y: None
+                                    height: dp(30)
+                            
+                            MDBoxLayout:
+                                orientation: 'horizontal'
+                                spacing: dp(10)
+                                size_hint_y: None
+                                height: dp(40)
+                                
+                                MDCheckbox:
+                                    id: washing_machine_checkbox
+                                    size_hint: None, None
+                                    size: dp(30), dp(30)
+                                
+                                MDLabel:
+                                    text: "Washing Machine"
+                                    theme_text_color: "Primary"
+                                    size_hint_y: None
+                                    height: dp(30)
+                
+                # Energy Information
+                MDCard:
+                    elevation: 2
+                    radius: [10]
+                    padding: dp(15)
+                    size_hint_y: None
+                    height: self.minimum_height + dp(30)
+                    
+                    MDBoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(10)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDLabel:
+                            text: "Energy Information"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDTextField:
+                            id: monthly_spending_field
+                            hint_text: "Monthly Electricity Bill (KSh)"
+                            icon_right: "currency-usd"
+                            input_filter: "float"
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: system_size_field
+                            hint_text: "Recommended System Size (kW)"
+                            icon_right: "solar-panel"
+                            input_filter: "float"
+                            size_hint_y: None
+                            height: dp(50)
+                        
+                        MDTextField:
+                            id: estimated_cost_field
+                            hint_text: "Estimated Cost (KSh)"
+                            icon_right: "currency-usd"
+                            input_filter: "float"
+                            size_hint_y: None
+                            height: dp(50)
+                
+                
+                # Additional Notes
+                MDCard:
+                    elevation: 3
+                    radius: [15]
+                    padding: dp(20)
+                    size_hint_y: None
+                    height: self.minimum_height + dp(40)
+                    
+                    MDBoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(15)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        
+                        MDLabel:
+                            text: "Additional Notes"
+                            font_style: "H6"
+                            theme_text_color: "Primary"
+                            size_hint_y: None
+                            height: dp(30)
+                        
+                        MDTextField:
+                            id: notes_field
+                            hint_text: "Survey notes and observations"
+                            multiline: True
+                            size_hint_y: None
+                            height: dp(120)
+                
+                # Action Buttons
+                MDBoxLayout:
+                    size_hint_y: None
+                    height: dp(60)
+                    spacing: dp(15)
+                    
+                    MDRaisedButton:
+                        text: "Cancel"
+                        md_bg_color: 0.5, 0.5, 0.5, 1
+                        on_release: root.go_back()
+                        size_hint_x: 0.4
+                    
+                    MDRaisedButton:
+                        text: "Save Survey"
+                        md_bg_color: app.theme_cls.primary_color
+                        on_release: root.save_survey()
+                        size_hint_x: 0.6

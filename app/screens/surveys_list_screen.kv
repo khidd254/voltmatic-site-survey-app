@@ -1,0 +1,23 @@
+<SurveysListScreen>:
+    name: 'surveys_list'
+    
+    MDBoxLayout:
+        orientation: 'vertical'
+        
+        # Header
+        MDTopAppBar:
+            id: header_label
+            title: "Client Surveys"
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
+            md_bg_color: app.theme_cls.primary_color
+            specific_text_color: 1, 1, 1, 1
+        
+        # Content
+        MDScrollView:
+            MDBoxLayout:
+                id: surveys_container
+                orientation: 'vertical'
+                spacing: dp(10)
+                padding: dp(15)
+                size_hint_y: None
+                height: self.minimum_height

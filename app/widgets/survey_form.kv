@@ -1,0 +1,52 @@
+<SurveyForm>:
+    orientation: 'vertical'
+    spacing: dp(15)
+    padding: dp(20)
+    size_hint_y: None
+    height: self.minimum_height
+    
+    MDCard:
+        elevation: 2
+        radius: [10]
+        padding: dp(15)
+        size_hint_y: None
+        height: self.minimum_height + dp(30)
+        
+        MDBoxLayout:
+            orientation: 'vertical'
+            spacing: dp(10)
+            size_hint_y: None
+            height: self.minimum_height
+            
+            MDLabel:
+                text: "Survey Form"
+                font_style: "H6"
+                theme_text_color: "Primary"
+                size_hint_y: None
+                height: dp(30)
+            
+            MDTextField:
+                hint_text: "Survey Location"
+                icon_right: "map-marker"
+                size_hint_y: None
+                height: dp(50)
+            
+            MDTextField:
+                hint_text: "Energy Requirements (kWh)"
+                icon_right: "flash"
+                input_filter: "float"
+                size_hint_y: None
+                height: dp(50)
+            
+            MDTextField:
+                hint_text: "Roof Area (sq meters)"
+                icon_right: "ruler"
+                input_filter: "float"
+                size_hint_y: None
+                height: dp(50)
+            
+            MDTextField:
+                hint_text: "Additional Notes"
+                multiline: True
+                size_hint_y: None
+                height: dp(80)

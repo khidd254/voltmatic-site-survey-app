@@ -1,0 +1,73 @@
+<ClientCard>:
+    size_hint_y: None
+    height: dp(100)
+    padding: dp(15)
+    spacing: dp(10)
+    elevation: 3
+    radius: [12]
+    md_bg_color: 1, 1, 1, 1
+    
+    MDBoxLayout:
+        orientation: 'horizontal'
+        spacing: dp(15)
+        
+        # Client avatar
+        MDCard:
+            size_hint: None, None
+            size: dp(60), dp(60)
+            radius: [30]
+            md_bg_color: app.theme_cls.primary_color
+            
+            MDLabel:
+                text: root.client_initial
+                font_style: "H5"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                halign: "center"
+                valign: "middle"
+        
+        # Client info
+        MDBoxLayout:
+            orientation: 'vertical'
+            spacing: dp(5)
+            
+            MDLabel:
+                text: root.client_name
+                font_style: "H6"
+                theme_text_color: "Primary"
+                size_hint_y: None
+                height: dp(25)
+            
+            MDLabel:
+                text: root.client_phone
+                font_style: "Caption"
+                theme_text_color: "Secondary"
+                size_hint_y: None
+                height: dp(20)
+            
+            MDLabel:
+                text: root.client_address
+                font_style: "Caption"
+                theme_text_color: "Secondary"
+                size_hint_y: None
+                height: dp(20)
+        
+        # Action buttons
+        MDBoxLayout:
+            orientation: 'vertical'
+            size_hint_x: None
+            width: dp(80)
+            spacing: dp(5)
+            
+            MDIconButton:
+                icon: "clipboard-plus"
+                theme_text_color: "Custom"
+                text_color: app.theme_cls.primary_color
+                on_release: root.start_survey()
+            
+            MDIconButton:
+                icon: "pencil"
+                theme_text_color: "Custom"
+                text_color: app.theme_cls.accent_color
+                on_release: root.edit_client()

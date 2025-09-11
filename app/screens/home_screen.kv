@@ -1,0 +1,236 @@
+<HomeScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        spacing: dp(10)
+        padding: dp(15)
+        
+        # Header with logo and title
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(80)
+            spacing: dp(15)
+            
+            AsyncImage:
+                source: 'assets/images/logo_small.png'
+                size_hint: None, None
+                size: dp(60), dp(60)
+                pos_hint: {'center_y': 0.5}
+            
+            MDBoxLayout:
+                orientation: 'vertical'
+                
+                MDLabel:
+                    text: "Voltmatic Energy Solutions"
+                    font_style: "H6"
+                    bold: True
+                    theme_text_color: "Primary"
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                
+                MDLabel:
+                    text: "Site Survey Application"
+                    font_style: "Caption"
+                    theme_text_color: "Secondary"
+                    size_hint_y: None
+                    height: self.texture_size[1]
+        
+        # Dashboard cards
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(120)
+            spacing: dp(10)
+            
+            # Clients card
+            MDCard:
+                elevation: 4
+                radius: [15]
+                md_bg_color: app.theme_cls.primary_color
+                
+                MDBoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(5)
+                    padding: dp(15)
+                    
+                    MDIcon:
+                        icon: "account-group"
+                        font_size: dp(30)
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(35)
+                    
+                    MDLabel:
+                        id: clients_count
+                        text: "0"
+                        font_style: "H5"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(30)
+                    
+                    MDRaisedButton:
+                        text: "View Clients"
+                        md_bg_color: app.theme_cls.accent_color
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        size_hint_y: None
+                        height: dp(40)
+                        on_release: root.go_to_clients()
+                    
+                    MDLabel:
+                        text: "Clients"
+                        font_style: "Caption"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(15)
+            
+            # Surveys card
+            MDCard:
+                elevation: 4
+                radius: [15]
+                md_bg_color: app.theme_cls.accent_color
+                
+                MDBoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(5)
+                    padding: dp(15)
+                    
+                    MDIcon:
+                        icon: "clipboard-list"
+                        font_size: dp(30)
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(35)
+                    
+                    MDLabel:
+                        id: surveys_count
+                        text: "0"
+                        font_style: "H5"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(30)
+                    
+                    MDLabel:
+                        text: "Surveys"
+                        font_style: "Caption"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(15)
+            
+            # Pending card
+            MDCard:
+                elevation: 4
+                radius: [15]
+                md_bg_color: 1, 0.6, 0, 1
+                
+                MDBoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(5)
+                    padding: dp(15)
+                    
+                    MDIcon:
+                        icon: "clock-outline"
+                        font_size: dp(30)
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(35)
+                    
+                    MDLabel:
+                        id: pending_surveys
+                        text: "0"
+                        font_style: "H5"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(30)
+                    
+                    MDLabel:
+                        text: "Pending"
+                        font_style: "Caption"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(15)
+        
+        # Quick actions
+        MDLabel:
+            text: "Quick Actions"
+            font_style: "H6"
+            theme_text_color: "Primary"
+            size_hint_y: None
+            height: dp(30)
+        
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(60)
+            spacing: dp(10)
+            
+            MDRaisedButton:
+                text: "New Client"
+                icon: "account-plus"
+                md_bg_color: app.theme_cls.primary_color
+                on_release: root.manager.current = 'client_form'
+                
+            MDRaisedButton:
+                text: "New Survey"
+                icon: "clipboard-plus"
+                md_bg_color: app.theme_cls.accent_color
+                on_release: root.go_to_new_survey()
+        
+        # Recent surveys
+        MDLabel:
+            text: "Recent Surveys"
+            font_style: "H6"
+            theme_text_color: "Primary"
+            size_hint_y: None
+            height: dp(30)
+        
+        ScrollView:
+            MDBoxLayout:
+                id: recent_surveys_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(8)
+        
+        # Bottom navigation
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(60)
+            spacing: dp(5)
+            
+            MDIconButton:
+                icon: "home"
+                theme_text_color: "Primary"
+                on_release: root.refresh_dashboard()
+                
+            MDIconButton:
+                icon: "account-group"
+                theme_text_color: "Primary"
+                on_release: root.go_to_clients()
+                
+            MDIconButton:
+                icon: "clipboard-list"
+                theme_text_color: "Primary"
+                on_release: root.go_to_surveys()
+                
+            MDIconButton:
+                icon: "cog"
+                theme_text_color: "Primary"

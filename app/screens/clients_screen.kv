@@ -1,0 +1,57 @@
+<ClientsScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        spacing: dp(10)
+        padding: dp(15)
+        
+        # Header
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(60)
+            spacing: dp(15)
+            
+            MDIconButton:
+                icon: "arrow-left"
+                theme_text_color: "Primary"
+                on_release: root.go_back()
+                size_hint: None, None
+                size: dp(40), dp(40)
+                pos_hint: {'center_y': 0.5}
+            
+            MDLabel:
+                text: "Clients Management"
+                font_style: "H5"
+                theme_text_color: "Primary"
+                pos_hint: {'center_y': 0.5}
+            
+            MDIconButton:
+                icon: "refresh"
+                theme_text_color: "Primary"
+                on_release: root.refresh_clients()
+                size_hint: None, None
+                size: dp(40), dp(40)
+                pos_hint: {'center_y': 0.5}
+        
+        # Search bar
+        MDTextField:
+            id: search_field
+            hint_text: "Search clients..."
+            icon_right: "magnify"
+            size_hint_y: None
+            height: dp(50)
+        
+        # Clients list
+        ScrollView:
+            MDBoxLayout:
+                id: clients_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(10)
+        
+        # Add client button
+        MDFloatingActionButton:
+            icon: "plus"
+            md_bg_color: app.theme_cls.primary_color
+            pos_hint: {'center_x': 0.9, 'center_y': 0.1}
+            on_release: root.add_client()
