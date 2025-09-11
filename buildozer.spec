@@ -20,7 +20,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow,pyjnius
+requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow,pyjnius,android
 
 # (str) Presplash of the application
 #presplash.filename = %(source.dir)s/assets/images/presplash.png
@@ -38,16 +38,16 @@ fullscreen = 0
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,CALL_PHONE,READ_PHONE_STATE
 
 # (int) Target Android API, should be as high as possible.
-android.api = 31
+android.api = 30
 
 # (int) Minimum API your APK / AAB will support.
 android.minapi = 21
 
 # (str) Android NDK version to use
-android.ndk = 23c
+android.ndk = 23b
 
 # (str) Android SDK version to use
-android.sdk = 31
+android.sdk = 30
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
@@ -94,9 +94,13 @@ android.add_assets = assets/
 # android.enable_androidx requires android.api >= 28
 android.enable_androidx = True
 
+# (bool) Skip byte compile for .py files
+# android.no-byte-compile-python = False
+
 # (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
 # In past, was `android.arch` as we weren't supporting builds for multiple archs at the same time.
-android.archs = arm64-v8a, armeabi-v7a
+# Build only for arm64-v8a for smaller APK size and better compatibility
+android.archs = arm64-v8a
 
 [buildozer]
 
