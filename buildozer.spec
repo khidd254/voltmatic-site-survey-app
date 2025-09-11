@@ -20,7 +20,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy==2.3.1,kivymd==1.1.1,sqlite3,pillow
+requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow,pyjnius
 
 # (str) Presplash of the application
 #presplash.filename = %(source.dir)s/assets/images/presplash.png
@@ -38,16 +38,16 @@ fullscreen = 0
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,CALL_PHONE,READ_PHONE_STATE
 
 # (int) Target Android API, should be as high as possible.
-android.api = 33
+android.api = 31
 
 # (int) Minimum API your APK / AAB will support.
 android.minapi = 21
 
 # (str) Android NDK version to use
-android.ndk = 25b
+android.ndk = 23c
 
 # (str) Android SDK version to use
-android.sdk = 33
+android.sdk = 31
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
