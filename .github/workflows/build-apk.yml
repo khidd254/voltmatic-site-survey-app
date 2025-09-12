@@ -10,12 +10,6 @@ on:
 
 jobs:
   build:
-    env:
-      # Set environment variables for buildozer
-      P4A_RELEASE_KEYSTORE: ${{ secrets.P4A_RELEASE_KEYSTORE }}
-      P4A_RELEASE_KEYSTORE_PASSWD: ${{ secrets.P4A_RELEASE_KEYSTORE_PASSWD }}
-      P4A_RELEASE_KEYALIAS_PASSWD: ${{ secrets.P4A_RELEASE_KEYALIAS_PASSWD }}
-      P4A_RELEASE_KEYALIAS: ${{ secrets.P4A_RELEASE_KEYALIAS }}
     runs-on: ubuntu-latest
 
     steps:
@@ -68,27 +62,65 @@ jobs:
 
     - name: Build APK with verbose output
       run: |
+        set -x  # Enable debug output
+        
         # Clean previous builds
-        rm -rf .buildozer
+        rm -rf .buildozer bin
         
         # Initialize buildozer if not already done
-        buildozer init
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
+        
+        # Create bin directory if it doesn't exist
+        mkdir -p bin
+        
+        # Print environment for debugging
+        echo "=== Environment Variables ==="
+        env | sort
+        echo "==========================="
+        
+        # Check Python and Buildozer versions
+        echo "=== Versions ==="
+        python --version
+        pip list | grep -E "buildozer|kivy|python-for-android"
+        echo "==============="
         
         # Build with verbose output
+        echo "Starting build..."
         buildozer -v android debug 2>&1 | tee build.log
+        
+        # Check build result
+        BUILD_RESULT=${PIPESTATUS[0]}
+        
+        # Create a summary of the build
+        echo "=== Build Summary ===" > build-summary.txt
+        echo "Build exit code: $BUILD_RESULT" >> build-summary.txt
+        echo "\n=== Directory Structure ===" >> build-summary.txt
+        find . -type d | sort >> build-summary.txt
+        echo "\n=== Bin Directory Contents ===" >> build-summary.txt
+        ls -la bin/ 2>/dev/null || echo "bin/ directory not found" >> build-summary.txt
         
         # Save build log as artifact
         echo "BUILD_LOG<<EOF" >> $GITHUB_ENV
         cat build.log >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
+        
+        # Exit with build status
+        if [ $BUILD_RESULT -ne 0 ]; then
+          echo "Build failed with exit code $BUILD_RESULT"
+          exit $BUILD_RESULT
+        fi
 
-    - name: Upload APK
-      if: success() || failure()
+    - name: Upload Build Artifacts
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: voltmatic-apk
+        name: build-artifacts
         path: |
-          bin/*.apk
+          **/bin/*.apk
           build.log
+          build-summary.txt
+          .buildozer/**/android/platform/build-*/build/outputs/apk/*/*.apk
         retention-days: 7
-        if-no-files-found: error
+        if-no-files-found: warn
