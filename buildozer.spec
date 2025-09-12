@@ -1,105 +1,41 @@
 [app]
 
 # (str) Title of your application
-title = Voltmatic Site Survey
+title = Voltmatic App
 
 # (str) Package name
-package.name = voltmaticsitesurvey
+package.name = voltmaticapp
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = co.ke.voltmaticenergysolutions
+package.domain = org.voltmatic
 
 # (str) Source code where the main.py live
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,txt,db
+source.include_exts = py,png,jpg,kv,atlas
 
 # (str) Application versioning (method 1)
-version = 1.0
+version = 0.1
 
 # (list) Application requirements
-# comma separated e.g. requirements = sqlite3,kivy
 requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow,pyjnius,android
 
-# (str) Presplash of the application
-#presplash.filename = %(source.dir)s/assets/images/presplash.png
-
-# (str) Icon of the application
-#icon.filename = %(source.dir)s/assets/images/icon.png
-
-# (str) Supported orientation (landscape, sensorLandscape, portrait, sensorPortrait or all)
+# Orientation and display
 orientation = portrait
-
-# (bool) Indicate if the application should be fullscreen or not
 fullscreen = 0
 
-# (list) Permissions
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,CALL_PHONE,READ_PHONE_STATE
-
-# (int) Target Android API, should be as high as possible.
+# Android specific
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.api = 30
-
-# (int) Minimum API your APK / AAB will support.
 android.minapi = 21
-
-# (str) Android NDK version to use
 android.ndk = 23b
-
-# (str) Android SDK version to use
 android.sdk = 30
-
-# (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
 
-# (str) Android entry point, default is ok for Kivy-based app
+# Kivy configuration
 android.entrypoint = org.kivy.android.PythonActivity
-
-# (str) Full name including package path of the Java class that implements Android Activity
-# android.activity_class_name = org.kivy.android.PythonActivity
-
-# (str) Full name including package path of the Java class that implements Python Service
-# android.service_class_name = org.kivy.android.PythonService
-
-# (list) Pattern to whitelist for the whole project
-android.whitelist = 
-
-# (str) Path to a custom whitelist file
-#android.whitelist_src = 
-
-# (str) Path to a custom blacklist file
-#android.blacklist_src = 
-
-# (list) List of Java .jar files to add to the libs so that pyjnius can access their classes. Don't add jars that you do not need, since extra jars can slow down the build process. Allows wildcards matching, for example: OUYA-ODK/libs/*.jar
-#android.add_jars = foo.jar,bar.jar,path/to/more/*.jar
-
-# (list) List of Java files to add to the android project (can be java or a directory containing the files)
-#android.add_src = 
-
-# (list) Android AAR archives to add
-#android.add_aars = 
-
-# (list) Put these files or directories in the apk assets directory.
-# Either form may be used, and assets need not be in 'source.include_exts'.
-# 1) android.add_assets = file1.txt,image.png,music.ogg,directory/
-# 2) android.add_assets.1 = path/to/file1.txt
-# 2) android.add_assets.2 = path/to/directory2/
-android.add_assets = assets/
-
-# (list) Gradle dependencies to add
-#android.gradle_dependencies = 
-
-# (bool) Enable AndroidX support. Enable when 'android.gradle_dependencies'
-# contains an 'androidx' package, or any package from Kotlin source.
-# android.enable_androidx requires android.api >= 28
 android.enable_androidx = True
-
-# (bool) Skip byte compile for .py files
-# android.no-byte-compile-python = False
-
-# (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
-# In past, was `android.arch` as we weren't supporting builds for multiple archs at the same time.
-# Build only for arm64-v8a for smaller APK size and better compatibility
 android.archs = arm64-v8a
 
 [buildozer]
