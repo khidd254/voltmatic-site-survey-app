@@ -7,9 +7,15 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Cancel in-progress runs when new commits are pushed
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Set a 30-minute timeout
 
     steps:
     - uses: actions/checkout@v3
