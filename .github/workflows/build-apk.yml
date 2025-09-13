@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Set a 30-minute timeout
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v3
@@ -32,120 +32,118 @@ jobs:
             build-essential \
             git \
             python3-pip \
-            python3-setuptools \
             python3-dev \
             python3-venv \
             libssl-dev \
             zlib1g-dev \
-            libbz2-dev \
-            libreadline-dev \
-            libsqlite3-dev \
-            wget \
-            curl \
-            llvm \
-            libncurses5-dev \
-            libncursesw5-dev \
-            xz-utils \
-            tk-dev \
-            libffi-dev \
-            liblzma-dev \
-            python-openssl \
-            unzip \
-            openjdk-8-jdk \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            ccache \
-            cmake \
-            ninja-build \
             libffi-dev \
             libxml2-dev \
             libxslt1-dev \
             libjpeg-dev \
             libpng-dev \
-            libfreetype6-dev \
-            libblas-dev \
-            liblapack-dev \
-            gfortran \
-            libatlas-base-dev \
-            libhdf5-dev \
-            libopenblas-dev \
-            libxrender1 \
-            libxext6 \
-            xvfb
+            autoconf \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            cmake \
+            openjdk-11-jdk \
+            unzip \
+            wget \
+            curl \
+            ninja-build
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v2
-      with:
-        ndk-version: 21.3.6528147
-        cmake-version: 3.18.1
-        build-tools-version: 30.0.3
-        platform: android-30
-
-    - name: Install Python dependencies
+    - name: Install Buildozer and dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install --upgrade Cython==0.29.33
-        pip install buildozer==1.5.0
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        pip install --user --upgrade Cython==0.29.33
+        pip install --user buildozer
+        export PATH=$PATH:$HOME/.local/bin/
+        buildozer --version
 
-    - name: Accept Android licenses
+    - name: Set up Android SDK and NDK
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
+        
+        # Install Android Command Line Tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
+        mkdir -p $ANDROID_HOME/cmdline-tools/latest
+        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest
+        mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+        rm -r $ANDROID_HOME/cmdline-tools/latest/cmdline-tools
+        
+        # Accept licenses
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+        
+        # Install required Android packages
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platform-tools" \
+            "platforms;android-30" \
+            "build-tools;30.0.3" \
+            "ndk;21.3.6528147"
+        
+        # Add Android tools to PATH
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+    - name: Initialize Buildozer
+      run: |
+        buildozer init || true
+        # Update buildozer.spec with necessary configurations
+        sed -i 's/^#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+        sed -i 's/^#android.sdk = .*/android.sdk = $ANDROID_HOME/' buildozer.spec
+        sed -i 's/^#android.ndk = .*/android.ndk = $ANDROID_HOME\/ndk\/21.3.6528147/' buildozer.spec
+        sed -i 's/^#android.api = .*/android.api = 30/' buildozer.spec
+        sed -i 's/^#android.minapi = .*/android.minapi = 21/' buildozer.spec
+        sed -i 's/^#android.sdk_path = .*/# android.sdk_path = /' buildozer.spec
+        sed -i 's/^#android.ndk_path = .*/# android.ndk_path = /' buildozer.spec
+
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
 
     - name: Build APK
       run: |
-        # Create bin directory if it doesn't exist
-        mkdir -p bin
-        
-        # Initialize buildozer if needed
-        if [ ! -f buildozer.spec ]; then
-          buildozer init
-        fi
-        
-        # Set environment variables
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-        export PATH=$PATH:$ANDROID_HOME/platform-tools
-        export PATH=$PATH:$ANDROID_HOME/tools/bin
-        
-        # Build with verbose output
-        echo "Starting build..."
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         buildozer -v android debug 2>&1 | tee build.log
         
-        # Check build result
-        BUILD_RESULT=${PIPESTATUS[0]}
-        
-        # Create a summary of the build
+        # Check if APK was generated
+        if [ -f "bin/*.apk" ]; then
+          echo "APK built successfully"
+        else
+          echo "APK build failed"
+          cat build.log
+          exit 1
+        fi
+
+    - name: Create build summary
+      if: always()
+      run: |
         echo "=== Build Summary ===" > build-summary.txt
-        echo "Build exit code: $BUILD_RESULT" >> build-summary.txt
+        echo "Build exit code: $?" >> build-summary.txt
         echo "\n=== Environment Variables ===" >> build-summary.txt
         env | sort >> build-summary.txt
         echo "\n=== Directory Structure ===" >> build-summary.txt
         find . -type d | sort >> build-summary.txt
         echo "\n=== Bin Directory Contents ===" >> build-summary.txt
         ls -la bin/ 2>/dev/null || echo "bin/ directory not found" >> build-summary.txt
-        
-        # Exit with build status
-        if [ $BUILD_RESULT -ne 0 ]; then
-          echo "Build failed with exit code $BUILD_RESULT"
-          echo "\n=== Last 50 lines of build log ===" >> build-summary.txt
-          tail -n 50 build.log >> build-summary.txt
-          echo "\n=== Buildozer Version ===" >> build-summary.txt
-          buildozer version >> build-summary.txt
-          exit $BUILD_RESULT
-        fi
 
-    - name: Upload APK
-      if: always()
-      uses: actions/upload-artifact@v4
+    - name: Upload APK artifact
+      if: success()
+      uses: actions/upload-artifact@v3
       with:
-        name: voltmatic-apk
+        name: apk-artifact
         path: |
           bin/*.apk
           build.log
-          build-summary.txt
+          buildozer.spec
+
+    - name: Upload build summary
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: build-summary
+        path: build-summary.txt
+
         if-no-files-found: warn
         retention-days: 7
