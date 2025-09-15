@@ -203,52 +203,70 @@ jobs:
         echo "=== Build Log Tail (last 100 lines) ==="
         tail -100 build.log
         
-        # Find and copy APK files to bin directory
-        echo "=== Searching for APK files ==="
-        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+        # Comprehensive APK search and debugging
+        echo "=== Comprehensive APK Search ==="
+        echo "Searching entire filesystem for APK files..."
+        find . -name "*.apk" -type f 2>/dev/null | while read apk; do
+          echo "Found APK: $apk"
+          ls -la "$apk"
+          file "$apk"
+        done
         
-        # Buildozer typically creates APKs in .buildozer/android/platform/build-*/dist/
-        APK_FOUND=false
-        if find .buildozer -name "*.apk" -type f 2>/dev/null | head -1; then
-          echo "Found APK in buildozer directory"
-          # Copy APK to bin directory with a proper name
-          find .buildozer -name "*.apk" -type f -exec cp {} bin/voltmatic-app-debug.apk \;
-          APK_FOUND=true
-        fi
-        
-        # Also check bin directory
-        if ls bin/*.apk 1> /dev/null 2>&1; then
-          echo "APK found in bin directory"
-          APK_FOUND=true
-        fi
-        
-        if [ "$APK_FOUND" = true ]; then
-          echo "APK built successfully"
-          echo "=== Final APK location ==="
-          ls -la bin/
-          echo "=== APK file details ==="
-          file bin/*.apk 2>/dev/null || echo "No APK in bin"
+        echo "=== Buildozer Directory Structure ==="
+        if [ -d .buildozer ]; then
+          find .buildozer -type f -name "*.apk" 2>/dev/null || echo "No APK files in .buildozer"
+          echo "=== Buildozer android platform contents ==="
+          ls -la .buildozer/android/platform/ 2>/dev/null || echo "No platform directory"
+          if [ -d .buildozer/android/platform ]; then
+            find .buildozer/android/platform -name "*apk*" -o -name "*dist*" -o -name "*build*" 2>/dev/null | head -10
+          fi
         else
-          echo "APK build failed - no APK file found"
-          echo "=== Full error analysis ==="
+          echo ".buildozer directory does not exist"
+        fi
+        
+        echo "=== Checking build log for APK generation ==="
+        grep -i "apk\|package\|signing\|zipalign" build.log | tail -10 || echo "No APK-related messages in build log"
+        
+        # Try to find and copy any APK files
+        APK_FOUND=false
+        APK_FILES=$(find . -name "*.apk" -type f 2>/dev/null)
+        
+        if [ -n "$APK_FILES" ]; then
+          echo "=== Copying found APK files to bin directory ==="
+          mkdir -p bin
+          for apk in $APK_FILES; do
+            echo "Copying $apk to bin/"
+            cp "$apk" "bin/$(basename "$apk")"
+            APK_FOUND=true
+          done
+        fi
+        
+        # Final check
+        if [ "$APK_FOUND" = true ]; then
+          echo "=== APK files successfully located ==="
+          ls -la bin/
+        else
+          echo "=== NO APK FILES FOUND - Build may have failed ==="
           echo "Build exit code: $BUILD_EXIT_CODE"
-          echo "=== Checking for common errors ==="
-          grep -i "error\|failed\|exception" build.log | tail -20 || echo "No obvious errors found in log"
-          echo "=== Directory structure search ==="
-          find . -type f -name "*.apk" 2>/dev/null || echo "No APK files anywhere"
-          echo "=== Buildozer build directory ==="
-          ls -la .buildozer/android/platform/ 2>/dev/null || echo "Buildozer platform directory not found"
-          exit $BUILD_EXIT_CODE
+          echo "=== Last 50 lines of build log ==="
+          tail -50 build.log
+          
+          # Don't exit with error if build reported success
+          if [ $BUILD_EXIT_CODE -eq 0 ]; then
+            echo "Build reported success but no APK found - this may be a buildozer issue"
+          else
+            exit $BUILD_EXIT_CODE
+          fi
         fi
 
     - name: Upload APK artifact
-      if: success()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: apk-artifact
         path: |
-          bin/*.apk
-          .buildozer/android/platform/build-*/dist/*.apk
+          bin/*
+          .buildozer/**/*.apk
           build.log
           buildozer.spec
         if-no-files-found: warn
