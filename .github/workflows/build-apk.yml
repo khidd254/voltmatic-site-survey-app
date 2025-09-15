@@ -242,8 +242,26 @@ jobs:
         # Use parallel compilation for faster builds
         export MAKEFLAGS="-j$(nproc)"
         export CCACHE_DIR=~/.ccache
-        buildozer android debug -v2>&1 | tee build.log
+        
+        # Ensure bin directory exists
+        mkdir -p bin
+        
+        # Run buildozer debug build
+        buildozer android debug --verbose 2>&1 | tee build.log
         BUILD_EXIT_CODE=$?
+        
+        # Check if APK was created in default buildozer location
+        echo "=== Checking for APK in buildozer bin directory ==="
+        if [ -f "bin/voltmaticapp-0.1-arm64-v8a-debug.apk" ]; then
+          echo "Found APK: bin/voltmaticapp-0.1-arm64-v8a-debug.apk"
+          ls -la bin/voltmaticapp-0.1-arm64-v8a-debug.apk
+        elif [ -f "bin/voltmaticapp-0.1-armeabi-v7a-debug.apk" ]; then
+          echo "Found APK: bin/voltmaticapp-0.1-armeabi-v7a-debug.apk"
+          ls -la bin/voltmaticapp-0.1-armeabi-v7a-debug.apk
+        else
+          echo "APK not found in bin directory, searching buildozer cache..."
+          find .buildozer -name "*.apk" -type f 2>/dev/null | head -5
+        fi
         
         # Immediately check for specific errors if build failed
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
@@ -281,6 +299,18 @@ jobs:
         # Comprehensive APK search and debugging
         echo "=== Comprehensive APK Search ==="
         echo "Searching entire filesystem for APK files..."
+        
+        # First check the most likely locations
+        echo "=== Checking standard APK locations ==="
+        for location in "bin/" ".buildozer/android/platform/build-arm64-v8a/dists/voltmaticapp/build/outputs/apk/debug/" ".buildozer/android/platform/build-armeabi-v7a/dists/voltmaticapp/build/outputs/apk/debug/" ".buildozer/android/platform/build/dists/voltmaticapp/build/outputs/apk/debug/"; do
+          if [ -d "$location" ]; then
+            echo "Checking $location:"
+            find "$location" -name "*.apk" -type f 2>/dev/null | head -3
+          fi
+        done
+        
+        # Then do comprehensive search
+        echo "=== Full APK search ==="
         find . -name "*.apk" -type f 2>/dev/null | while read apk; do
           echo "Found APK: $apk"
           ls -la "$apk"
@@ -312,8 +342,27 @@ jobs:
           for apk in $APK_FILES; do
             echo "Copying $apk to bin/"
             cp "$apk" "bin/$(basename "$apk")"
+            # Also create a generic name
+            cp "$apk" "bin/voltmatic-app.apk"
             APK_FOUND=true
           done
+        else
+          # Try alternative buildozer command if no APK found
+          echo "=== No APK found, trying alternative build command ==="
+          buildozer android debug --verbose --force-build 2>&1 | tee -a build.log
+          
+          # Search again after alternative build
+          APK_FILES=$(find . -name "*.apk" -type f 2>/dev/null)
+          if [ -n "$APK_FILES" ]; then
+            echo "=== APK found after alternative build ==="
+            mkdir -p bin
+            for apk in $APK_FILES; do
+              echo "Copying $apk to bin/"
+              cp "$apk" "bin/$(basename "$apk")"
+              cp "$apk" "bin/voltmatic-app.apk"
+              APK_FOUND=true
+            done
+          fi
         fi
         
         # Final check and force APK creation if needed
