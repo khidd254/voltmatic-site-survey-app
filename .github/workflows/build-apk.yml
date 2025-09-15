@@ -123,6 +123,43 @@ jobs:
     - name: Install Python dependencies
       run: |
         pip install -r requirements.txt
+        
+    - name: Pre-build checks
+      run: |
+        echo "=== Pre-build Validation ==="
+        
+        # Check if main.py exists
+        if [ ! -f main.py ]; then
+          echo "ERROR: main.py not found!"
+          exit 1
+        fi
+        
+        # Check if all required screen files exist
+        echo "Checking screen files..."
+        for screen in home_screen clients_screen survey_screen client_form_screen surveys_list_screen call_history_screen; do
+          if [ ! -f "app/screens/${screen}.py" ]; then
+            echo "WARNING: app/screens/${screen}.py not found"
+          fi
+          if [ ! -f "app/screens/${screen}.kv" ]; then
+            echo "WARNING: app/screens/${screen}.kv not found"
+          fi
+        done
+        
+        # Check if database.py exists
+        if [ ! -f app/database.py ]; then
+          echo "ERROR: app/database.py not found!"
+          exit 1
+        fi
+        
+        # Check if assets directory exists
+        if [ ! -d assets ]; then
+          echo "WARNING: assets directory not found, creating..."
+          mkdir -p assets/images assets/icons
+        fi
+        
+        # Validate buildozer.spec syntax
+        echo "Validating buildozer.spec..."
+        python -c "import configparser; config = configparser.ConfigParser(); config.read('buildozer.spec'); print('buildozer.spec syntax is valid')"
 
     - name: Build APK
       run: |
@@ -131,24 +168,56 @@ jobs:
         export ANDROID_SDK_ROOT=$ANDROID_HOME
         export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/21.3.6528147
         
+        # Debug environment
+        echo "=== Environment Debug ==="
+        echo "PATH: $PATH"
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+        echo "Python version: $(python --version)"
+        echo "Buildozer version: $(buildozer --version)"
+        
+        # Check buildozer.spec
+        echo "=== Buildozer Config Check ==="
+        if [ -f buildozer.spec ]; then
+          echo "buildozer.spec found"
+          grep -E "requirements|android\.(api|minapi|ndk|sdk)" buildozer.spec
+        else
+          echo "ERROR: buildozer.spec not found!"
+          exit 1
+        fi
+        
         # Create necessary directories
         mkdir -p bin
         
-        # Build with buildozer
+        # Build with buildozer (capture exit code)
         echo "Starting buildozer build..."
+        set +e  # Don't exit on error
         buildozer -v android debug 2>&1 | tee build.log
+        BUILD_EXIT_CODE=$?
+        set -e  # Re-enable exit on error
+        
+        echo "Build completed with exit code: $BUILD_EXIT_CODE"
+        
+        # Always show build log tail for debugging
+        echo "=== Build Log Tail (last 100 lines) ==="
+        tail -100 build.log
         
         # Check if APK was generated
         if ls bin/*.apk 1> /dev/null 2>&1; then
           echo "APK built successfully"
           ls -la bin/
         else
-          echo "APK build failed - checking for errors..."
-          echo "=== Build Log Tail ==="
-          tail -50 build.log
+          echo "APK build failed"
+          echo "=== Full error analysis ==="
+          echo "Build exit code: $BUILD_EXIT_CODE"
+          echo "=== Checking for common errors ==="
+          grep -i "error\|failed\|exception" build.log | tail -20 || echo "No obvious errors found in log"
           echo "=== Bin Directory Contents ==="
           ls -la bin/ || echo "bin directory not found"
-          exit 1
+          echo "=== Buildozer Directory ==="
+          ls -la .buildozer/ 2>/dev/null || echo ".buildozer directory not found"
+          exit $BUILD_EXIT_CODE
         fi
 
     - name: Upload APK artifact
