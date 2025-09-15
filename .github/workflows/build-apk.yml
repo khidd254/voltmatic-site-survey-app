@@ -318,11 +318,21 @@ jobs:
           
           # If still no APK, create a dummy file to indicate the issue
           if [ "$APK_FOUND" = false ]; then
-            echo "Creating error report file..."
+            echo "Creating comprehensive error report file..."
             echo "APK generation failed. Build exit code: $BUILD_EXIT_CODE" > bin/BUILD_FAILED.txt
             echo "Check build.log for details" >> bin/BUILD_FAILED.txt
-            echo "Last 100 lines of build log:" >> bin/BUILD_FAILED.txt
-            tail -100 build.log >> bin/BUILD_FAILED.txt
+            echo "" >> bin/BUILD_FAILED.txt
+            echo "=== ERROR ANALYSIS ===" >> bin/BUILD_FAILED.txt
+            echo "Total log lines: $(wc -l < build.log)" >> bin/BUILD_FAILED.txt
+            echo "" >> bin/BUILD_FAILED.txt
+            echo "=== ERRORS, FAILURES, EXCEPTIONS ===" >> bin/BUILD_FAILED.txt
+            grep -n -i "error\|failed\|exception\|traceback" build.log >> bin/BUILD_FAILED.txt || echo "No obvious errors found" >> bin/BUILD_FAILED.txt
+            echo "" >> bin/BUILD_FAILED.txt
+            echo "=== FIRST 50 LINES (Setup Phase) ===" >> bin/BUILD_FAILED.txt
+            head -50 build.log >> bin/BUILD_FAILED.txt
+            echo "" >> bin/BUILD_FAILED.txt
+            echo "=== LAST 200 LINES (Final Phase) ===" >> bin/BUILD_FAILED.txt
+            tail -200 build.log >> bin/BUILD_FAILED.txt
           fi
         fi
 
