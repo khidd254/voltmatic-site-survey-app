@@ -219,14 +219,21 @@ jobs:
         echo "=== Cleaning buildozer cache ==="
         buildozer android clean || true
         
-        # Run buildozer with explicit debug flag
-        echo "=== Running buildozer android debug ==="
-        buildozer android debug 2>&1 | tee build.log
+        # Run buildozer with maximum verbosity and error capture
+        echo "=== Running buildozer android debug with maximum verbosity ==="
+        buildozer -v android debug 2>&1 | tee build.log
         BUILD_EXIT_CODE=$?
         
-        # If that fails, try release build
+        # Immediately check for specific errors if build failed
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo "=== Debug build failed, trying release build ==="
+          echo "=== BUILD FAILED - Analyzing error ==="
+          echo "Exit code: $BUILD_EXIT_CODE"
+          
+          # Look for specific error patterns
+          echo "=== Searching for specific errors ==="
+          grep -A5 -B5 -i "error\|exception\|failed\|traceback" build.log | tail -50
+          
+          echo "=== Trying release build as fallback ==="
           buildozer android release 2>&1 | tee -a build.log
           BUILD_EXIT_CODE=$?
         fi
@@ -237,9 +244,18 @@ jobs:
         
         echo "Build completed with exit code: $BUILD_EXIT_CODE"
         
-        # Always show build log tail for debugging
-        echo "=== Build Log Tail (last 100 lines) ==="
-        tail -100 build.log
+        # Show different parts of the build log for debugging
+        echo "=== Build Log Analysis ==="
+        echo "Total log lines: $(wc -l < build.log)"
+        
+        echo "=== First 50 lines (setup phase) ==="
+        head -50 build.log
+        
+        echo "=== Lines containing ERROR, FAILED, or Exception ==="
+        grep -n -i "error\|failed\|exception\|traceback" build.log || echo "No obvious errors found"
+        
+        echo "=== Last 200 lines (final phase) ==="
+        tail -200 build.log
         
         # Comprehensive APK search and debugging
         echo "=== Comprehensive APK Search ==="
