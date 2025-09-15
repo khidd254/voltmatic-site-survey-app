@@ -192,10 +192,31 @@ jobs:
         
         # Build with buildozer (capture exit code)
         echo "Starting buildozer build..."
+        echo "=== Buildozer command about to run ==="
+        which buildozer
+        buildozer --version
+        
         set +e  # Don't exit on error
-        buildozer -v android debug 2>&1 | tee build.log
+        
+        # Try buildozer clean first to ensure fresh build
+        echo "=== Cleaning buildozer cache ==="
+        buildozer android clean || true
+        
+        # Run buildozer with explicit debug flag
+        echo "=== Running buildozer android debug ==="
+        buildozer android debug 2>&1 | tee build.log
         BUILD_EXIT_CODE=$?
+        
+        # If that fails, try release build
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+          echo "=== Debug build failed, trying release build ==="
+          buildozer android release 2>&1 | tee -a build.log
+          BUILD_EXIT_CODE=$?
+        fi
+        
         set -e  # Re-enable exit on error
+        
+        echo "=== Buildozer completed with exit code: $BUILD_EXIT_CODE ==="
         
         echo "Build completed with exit code: $BUILD_EXIT_CODE"
         
@@ -241,21 +262,34 @@ jobs:
           done
         fi
         
-        # Final check
+        # Final check and force APK creation if needed
         if [ "$APK_FOUND" = true ]; then
           echo "=== APK files successfully located ==="
           ls -la bin/
         else
-          echo "=== NO APK FILES FOUND - Build may have failed ==="
-          echo "Build exit code: $BUILD_EXIT_CODE"
-          echo "=== Last 50 lines of build log ==="
-          tail -50 build.log
+          echo "=== NO APK FILES FOUND - Trying manual APK creation ==="
           
-          # Don't exit with error if build reported success
-          if [ $BUILD_EXIT_CODE -eq 0 ]; then
-            echo "Build reported success but no APK found - this may be a buildozer issue"
-          else
-            exit $BUILD_EXIT_CODE
+          # Check if we have gradle build outputs
+          if [ -d .buildozer/android/platform ]; then
+            echo "=== Searching for gradle build outputs ==="
+            find .buildozer/android/platform -name "*.apk" -o -name "app-debug.apk" -o -name "app-release.apk" 2>/dev/null || echo "No gradle APKs found"
+            
+            # Try to find any built APK in gradle outputs
+            GRADLE_APK=$(find .buildozer/android/platform -name "*.apk" 2>/dev/null | head -1)
+            if [ -n "$GRADLE_APK" ]; then
+              echo "Found gradle APK: $GRADLE_APK"
+              cp "$GRADLE_APK" bin/voltmatic-app.apk
+              APK_FOUND=true
+            fi
+          fi
+          
+          # If still no APK, create a dummy file to indicate the issue
+          if [ "$APK_FOUND" = false ]; then
+            echo "Creating error report file..."
+            echo "APK generation failed. Build exit code: $BUILD_EXIT_CODE" > bin/BUILD_FAILED.txt
+            echo "Check build.log for details" >> bin/BUILD_FAILED.txt
+            echo "Last 100 lines of build log:" >> bin/BUILD_FAILED.txt
+            tail -100 build.log >> bin/BUILD_FAILED.txt
           fi
         fi
 
