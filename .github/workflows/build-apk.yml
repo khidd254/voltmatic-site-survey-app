@@ -98,7 +98,7 @@ jobs:
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-    - name: Verify buildozer configuration
+    - name: Configure buildozer to use pre-installed SDK/NDK
       run: |
         # Verify buildozer.spec exists and has correct configuration
         if [ ! -f buildozer.spec ]; then
@@ -106,9 +106,13 @@ jobs:
           exit 1
         fi
         
+        # Update buildozer.spec to use our pre-installed SDK/NDK
+        sed -i "s|android.ndk_path = .*|android.ndk_path = $ANDROID_HOME/ndk/21.3.6528147|" buildozer.spec
+        sed -i "s|android.sdk_path = .*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
+        
         # Display current configuration for debugging
-        echo "=== Current buildozer.spec configuration ==="
-        grep -E "(requirements|android\.(api|minapi|ndk|sdk|archs|accept_sdk_license))" buildozer.spec || true
+        echo "=== Updated buildozer.spec configuration ==="
+        grep -E "(requirements|android\.(api|minapi|ndk|sdk|archs|accept_sdk_license|ndk_path|sdk_path))" buildozer.spec || true
         
         # Verify environment variables
         echo "=== Environment Variables ==="
@@ -116,9 +120,11 @@ jobs:
         echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
         echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
         
-        # Check if Android SDK is properly installed
+        # Check if Android SDK/NDK are properly installed
+        echo "=== Verifying SDK/NDK installation ==="
         ls -la $ANDROID_HOME/ || echo "Android SDK directory not found"
         ls -la $ANDROID_HOME/ndk/ || echo "NDK directory not found"
+        ls -la $ANDROID_HOME/ndk/21.3.6528147/ || echo "Specific NDK version not found"
 
     - name: Install Python dependencies
       run: |
