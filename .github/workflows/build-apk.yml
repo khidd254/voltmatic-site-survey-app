@@ -15,7 +15,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    
+    env:
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      ANDROID_NDK_HOME: /opt/android-sdk/ndk/21.3.6528147
 
     steps:
     - uses: actions/checkout@v3
@@ -62,15 +67,17 @@ jobs:
 
     - name: Set up Android SDK and NDK
       run: |
+        sudo mkdir -p $ANDROID_HOME
+        sudo chown $USER:$USER $ANDROID_HOME
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
         
         # Install Android Command Line Tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
         mkdir -p $ANDROID_HOME/cmdline-tools/latest
-        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest
-        mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-        rm -r $ANDROID_HOME/cmdline-tools/latest/cmdline-tools
+        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+        rm -r $ANDROID_HOME/cmdline-tools/cmdline-tools
         
         # Accept licenses
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
@@ -82,21 +89,36 @@ jobs:
             "build-tools;30.0.3" \
             "ndk;21.3.6528147"
         
+        # Set environment variables for buildozer
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/21.3.6528147" >> $GITHUB_ENV
+        
         # Add Android tools to PATH
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-    - name: Initialize Buildozer
+    - name: Verify buildozer configuration
       run: |
-        buildozer init || true
-        # Update buildozer.spec with necessary configurations
-        sed -i 's/^#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
-        sed -i 's/^#android.sdk = .*/android.sdk = $ANDROID_HOME/' buildozer.spec
-        sed -i 's/^#android.ndk = .*/android.ndk = $ANDROID_HOME\/ndk\/21.3.6528147/' buildozer.spec
-        sed -i 's/^#android.api = .*/android.api = 30/' buildozer.spec
-        sed -i 's/^#android.minapi = .*/android.minapi = 21/' buildozer.spec
-        sed -i 's/^#android.sdk_path = .*/# android.sdk_path = /' buildozer.spec
-        sed -i 's/^#android.ndk_path = .*/# android.ndk_path = /' buildozer.spec
+        # Verify buildozer.spec exists and has correct configuration
+        if [ ! -f buildozer.spec ]; then
+          echo "buildozer.spec not found!"
+          exit 1
+        fi
+        
+        # Display current configuration for debugging
+        echo "=== Current buildozer.spec configuration ==="
+        grep -E "(requirements|android\.(api|minapi|ndk|sdk|archs|accept_sdk_license))" buildozer.spec || true
+        
+        # Verify environment variables
+        echo "=== Environment Variables ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+        
+        # Check if Android SDK is properly installed
+        ls -la $ANDROID_HOME/ || echo "Android SDK directory not found"
+        ls -la $ANDROID_HOME/ndk/ || echo "NDK directory not found"
 
     - name: Install Python dependencies
       run: |
@@ -104,15 +126,28 @@ jobs:
 
     - name: Build APK
       run: |
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$HOME/.local/bin
+        export ANDROID_HOME=$ANDROID_HOME
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/21.3.6528147
+        
+        # Create necessary directories
+        mkdir -p bin
+        
+        # Build with buildozer
+        echo "Starting buildozer build..."
         buildozer -v android debug 2>&1 | tee build.log
         
         # Check if APK was generated
-        if [ -f "bin/*.apk" ]; then
+        if ls bin/*.apk 1> /dev/null 2>&1; then
           echo "APK built successfully"
+          ls -la bin/
         else
-          echo "APK build failed"
-          cat build.log
+          echo "APK build failed - checking for errors..."
+          echo "=== Build Log Tail ==="
+          tail -50 build.log
+          echo "=== Bin Directory Contents ==="
+          ls -la bin/ || echo "bin directory not found"
           exit 1
         fi
 

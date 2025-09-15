@@ -19,24 +19,25 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
 # (list) Application requirements
-requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow,pyjnius,android
+requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow==9.5.0,requests==2.28.2,python-dateutil==2.8.2,plyer==2.1.0,pyjnius==1.4.2,android
 
 # Orientation and display
 orientation = portrait
 fullscreen = 0
 
 # Android specific
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
 android.api = 30
 android.minapi = 21
-android.ndk = 23b
+android.ndk = 21.3.6528147
 android.sdk = 30
 android.private_storage = True
+android.accept_sdk_license = True
 
 # Kivy configuration
 android.entrypoint = org.kivy.android.PythonActivity
 android.enable_androidx = True
-android.archs = arm64-v8a
+android.archs = arm64-v8a,armeabi-v7a
 
 [buildozer]
 
