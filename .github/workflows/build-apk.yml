@@ -151,6 +151,16 @@ jobs:
           exit 1
         fi
 
+    - name: Upload APK artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-artifact
+        path: |
+          bin/*.apk
+          build.log
+          buildozer.spec
+
     - name: Create build summary
       if: always()
       run: |
@@ -163,22 +173,11 @@ jobs:
         echo "\n=== Bin Directory Contents ===" >> build-summary.txt
         ls -la bin/ 2>/dev/null || echo "bin/ directory not found" >> build-summary.txt
 
-    - name: Upload APK artifact
-      if: success()
-      uses: actions/upload-artifact@v3
-      with:
-        name: apk-artifact
-        path: |
-          bin/*.apk
-          build.log
-          buildozer.spec
-
     - name: Upload build summary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: build-summary
         path: build-summary.txt
-
         if-no-files-found: warn
         retention-days: 7
