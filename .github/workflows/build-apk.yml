@@ -113,8 +113,12 @@ jobs:
         fi
         
         # Update buildozer.spec to use our pre-installed SDK/NDK
-        sed -i "s|android.ndk_path = .*|android.ndk_path = $ANDROID_HOME/ndk/21.3.6528147|" buildozer.spec
-        sed -i "s|android.sdk_path = .*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
+        sed -i "s|android.sdk_path.*|android.sdk_path = $ANDROID_HOME|g" buildozer.spec
+        sed -i "s|android.ndk_path.*|android.ndk_path = $ANDROID_NDK_HOME|g" buildozer.spec
+        
+        # Create symlink so buildozer finds the NDK in its expected location
+        mkdir -p ~/.buildozer/android/platform
+        ln -sf $ANDROID_NDK_HOME ~/.buildozer/android/platform/android-ndk-r25.2.9519653
         
         # Display current configuration for debugging
         echo "=== Updated buildozer.spec configuration ==="
@@ -136,6 +140,10 @@ jobs:
         echo "=== Verifying sdkmanager accessibility ==="
         ls -la $ANDROID_HOME/tools/bin/sdkmanager || echo "sdkmanager symlink not found"
         $ANDROID_HOME/tools/bin/sdkmanager --version || echo "sdkmanager not working"
+        
+        # Verify NDK symlink for buildozer
+        echo "=== Verifying NDK symlink for buildozer ==="
+        ls -la ~/.buildozer/android/platform/android-ndk-r25.2.9519653 || echo "NDK symlink not found"
 
     - name: Install Python dependencies
       run: |
