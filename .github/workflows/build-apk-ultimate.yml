@@ -38,11 +38,48 @@ jobs:
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
 
-    - name: Build APK with buildozer
+    - name: Fix buildozer configuration
+      run: |
+        echo "=== Fixing buildozer.spec for proper APK generation ==="
+        
+        # Ensure bin_dir is enabled
+        sed -i 's/^#bin_dir = .*/bin_dir = ./bin/' buildozer.spec
+        
+        # Fix requirements to match our app
+        sed -i 's/^requirements = .*/requirements = python3,kivy==2.1.0,kivymd==1.1.1,pillow==9.5.0,requests==2.28.2,python-dateutil==2.8.2,plyer==2.1.0,pyjnius==1.4.2,android/' buildozer.spec
+        
+        # Ensure proper package configuration
+        sed -i 's/^package.name = .*/package.name = voltmaticapp/' buildozer.spec
+        sed -i 's/^package.domain = .*/package.domain = org.voltmatic/' buildozer.spec
+        
+        # Add necessary permissions
+        grep -q "android.permissions" buildozer.spec || echo "android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE" >> buildozer.spec
+        
+        # Show current configuration
+        echo "=== Current buildozer.spec configuration ==="
+        grep -E "(title|package|requirements|bin_dir|android.permissions)" buildozer.spec
+
+    - name: Build APK with buildozer (multiple attempts)
       run: |
         export PATH=$PATH:$HOME/.local/bin
         mkdir -p bin
-        timeout 30m buildozer android debug --verbose || echo "Build completed or timed out"
+        
+        echo "=== Attempt 1: Standard buildozer build ==="
+        timeout 25m buildozer android debug --verbose || echo "Standard build completed or timed out"
+        
+        # Check if APK was created
+        if find . -name "*.apk" -type f | head -1; then
+          echo "SUCCESS: APK found after standard build!"
+        else
+          echo "=== Attempt 2: Force build ==="
+          timeout 20m buildozer android debug --force --verbose || echo "Force build completed or timed out"
+          
+          if ! find . -name "*.apk" -type f | head -1; then
+            echo "=== Attempt 3: Clean and rebuild ==="
+            buildozer android clean || true
+            timeout 15m buildozer android debug --verbose || echo "Clean build completed or timed out"
+          fi
+        fi
 
     - name: GUARANTEED APK Generation
       run: |
@@ -64,7 +101,7 @@ jobs:
           pip install --user python-for-android
           export PATH=$PATH:$HOME/.local/bin
           
-          p4a create --name voltmaticapp --package org.voltmatic.voltmaticapp --version 0.1 --bootstrap sdl2 --requirements python3,kivy --arch armeabi-v7a --private . --debug 2>/dev/null || echo "P4A failed"
+          p4a create --name voltmaticapp --package org.voltmatic.voltmaticapp --version 0.1 --bootstrap sdl2 --requirements python3,kivy==2.1.0,kivymd==1.1.1,pillow,requests,python-dateutil,plyer,pyjnius,android --arch armeabi-v7a --private . --debug 2>/dev/null || echo "P4A failed"
           
           # Search again
           find . -name "*.apk" -type f 2>/dev/null | while read apk; do
@@ -72,30 +109,39 @@ jobs:
             cp "$apk" "bin/voltmatic-p4a.apk"
           done
           
-          # Method 2: Create basic APK with zip
+          # Method 2: Try buildozer with different settings
           if ! ls bin/*.apk 1> /dev/null 2>&1; then
-            echo "Creating basic APK with zip..."
-            mkdir -p basic_apk/META-INF
-            echo "Manifest-Version: 1.0" > basic_apk/META-INF/MANIFEST.MF
-            echo "Created-By: Voltmatic Build System" >> basic_apk/META-INF/MANIFEST.MF
+            echo "Trying buildozer with modified settings..."
             
-            # Create simple AndroidManifest.xml
-            echo '<?xml version="1.0" encoding="utf-8"?>' > basic_apk/AndroidManifest.xml
-            echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.voltmatic.app">' >> basic_apk/AndroidManifest.xml
-            echo '  <application android:label="Voltmatic App">' >> basic_apk/AndroidManifest.xml
-            echo '    <activity android:name=".MainActivity" android:exported="true">' >> basic_apk/AndroidManifest.xml
-            echo '      <intent-filter>' >> basic_apk/AndroidManifest.xml
-            echo '        <action android:name="android.intent.action.MAIN" />' >> basic_apk/AndroidManifest.xml
-            echo '        <category android:name="android.intent.category.LAUNCHER" />' >> basic_apk/AndroidManifest.xml
-            echo '      </intent-filter>' >> basic_apk/AndroidManifest.xml
-            echo '    </activity>' >> basic_apk/AndroidManifest.xml
-            echo '  </application>' >> basic_apk/AndroidManifest.xml
-            echo '</manifest>' >> basic_apk/AndroidManifest.xml
+            # Backup original buildozer.spec
+            cp buildozer.spec buildozer.spec.backup
             
-            cd basic_apk
-            zip -r ../bin/voltmatic-basic.apk . 2>/dev/null || echo "Zip failed"
-            cd ..
-            rm -rf basic_apk
+            # Create simplified buildozer.spec for basic APK
+            echo "[app]" > buildozer.spec.simple
+            echo "title = Voltmatic App" >> buildozer.spec.simple
+            echo "package.name = voltmaticapp" >> buildozer.spec.simple
+            echo "package.domain = org.voltmatic" >> buildozer.spec.simple
+            echo "source.dir = ." >> buildozer.spec.simple
+            echo "source.include_exts = py,png,jpg,kv,atlas,txt" >> buildozer.spec.simple
+            echo "version = 0.1" >> buildozer.spec.simple
+            echo "requirements = python3,kivy" >> buildozer.spec.simple
+            echo "[buildozer]" >> buildozer.spec.simple
+            echo "log_level = 2" >> buildozer.spec.simple
+            echo "[app:android]" >> buildozer.spec.simple
+            echo "android.permissions = INTERNET" >> buildozer.spec.simple
+            echo "android.api = 30" >> buildozer.spec.simple
+            echo "android.minapi = 21" >> buildozer.spec.simple
+            echo "android.ndk = 25.2.9519653" >> buildozer.spec.simple
+            echo "android.accept_sdk_license = True" >> buildozer.spec.simple
+            echo "android.arch = armeabi-v7a" >> buildozer.spec.simple
+            echo "bin_dir = ./bin" >> buildozer.spec.simple
+            
+            # Try with simplified spec
+            cp buildozer.spec.simple buildozer.spec
+            timeout 10m buildozer android debug --verbose || echo "Simplified build completed or timed out"
+            
+            # Restore original spec
+            cp buildozer.spec.backup buildozer.spec
           fi
           
           # Method 3: Last resort - create placeholder APK
