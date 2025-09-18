@@ -270,9 +270,21 @@ jobs:
         # Ensure bin directory exists
         mkdir -p bin
         
-        # Run buildozer debug build
+        # Run buildozer debug build with maximum verbosity
+        echo "=== Starting buildozer android debug build ==="
         buildozer android debug --verbose 2>&1 | tee build.log
         BUILD_EXIT_CODE=$?
+        
+        echo "=== Build completed with exit code: $BUILD_EXIT_CODE ==="
+        
+        # Immediately check what buildozer created
+        echo "=== Immediate post-build directory check ==="
+        echo "Contents of current directory:"
+        ls -la
+        echo "Contents of bin directory (if exists):"
+        ls -la bin/ 2>/dev/null || echo "bin directory does not exist"
+        echo "Contents of .buildozer directory structure:"
+        find .buildozer -type f -name "*.apk" 2>/dev/null | head -10 || echo "No APK files found in .buildozer"
         
         # Enhanced APK detection - search for any APK files first
         echo "=== Enhanced APK Detection ==="
@@ -379,14 +391,30 @@ jobs:
         APK_FOUND=false
         mkdir -p bin
         
-        # Search for APK files in all possible locations
-        echo "Comprehensive APK search in all buildozer locations..."
+        # First, do a simple global search for ANY APK files
+        echo "=== Global APK Search ==="
+        ALL_APKS=$(find . -name "*.apk" -type f 2>/dev/null)
+        if [ -n "$ALL_APKS" ]; then
+          echo "Found APK files anywhere in project:"
+          for apk in $ALL_APKS; do
+            echo "  APK: $apk ($(ls -lh "$apk" | awk '{print $5}'))"
+            # Copy any found APK to bin directory
+            cp "$apk" "bin/$(basename "$apk")"
+            cp "$apk" "bin/voltmatic-app-found.apk"
+            APK_FOUND=true
+          done
+        else
+          echo "No APK files found anywhere in project directory"
+        fi
         
-        # Define all possible APK locations based on buildozer behavior
-        APK_SEARCH_PATHS=(
-          "bin/"
-          ".buildozer/android/platform/build-arm64-v8a/dists/voltmaticapp/build/outputs/apk/debug/"
-          ".buildozer/android/platform/build-armeabi-v7a/dists/voltmaticapp/build/outputs/apk/debug/"
+        # If no APKs found globally, search in specific buildozer locations
+        if [ "$APK_FOUND" = false ]; then
+          echo "=== Searching specific buildozer locations ==="
+          # Define all possible APK locations based on buildozer behavior
+          APK_SEARCH_PATHS=(
+            "bin/"
+            ".buildozer/android/platform/build-arm64-v8a/dists/voltmaticapp/build/outputs/apk/debug/"
+            ".buildozer/android/platform/build-armeabi-v7a/dists/voltmaticapp/build/outputs/apk/debug/"
           ".buildozer/android/platform/build/dists/voltmaticapp/build/outputs/apk/debug/"
           ".buildozer/android/platform/build/dists/voltmaticapp/build/outputs/apk/"
           ".buildozer/android/platform/"
@@ -409,17 +437,30 @@ jobs:
           fi
         done
         
-        # If no APK found in standard locations, do a comprehensive search
+        # If still no APK found, try more aggressive search patterns
         if [ "$APK_FOUND" = false ]; then
-          echo "=== No APK in standard locations, doing comprehensive search ==="
-          ALL_APKS=$(find . -name "*.apk" -type f 2>/dev/null)
+          echo "=== Aggressive APK search with buildozer patterns ==="
           
-          if [ -n "$ALL_APKS" ]; then
-            echo "Found APK files in non-standard locations:"
-            for apk in $ALL_APKS; do
+          # Search for any directory that might contain APKs
+          echo "Searching for any build output directories..."
+          find .buildozer -type d -name "*apk*" 2>/dev/null | head -5
+          find .buildozer -type d -name "*output*" 2>/dev/null | head -5
+          find .buildozer -type d -name "*debug*" 2>/dev/null | head -5
+          
+          # Search for APKs with different patterns
+          echo "Searching with different APK patterns..."
+          find .buildozer -name "*.apk" -type f 2>/dev/null
+          find .buildozer -name "*voltmatic*" -type f 2>/dev/null
+          find .buildozer -name "*debug*" -type f 2>/dev/null | grep -i apk
+          
+          # Try to find APKs in any subdirectory
+          APK_FILES=$(find .buildozer -name "*.apk" -type f 2>/dev/null)
+          if [ -n "$APK_FILES" ]; then
+            echo "Found APK files in buildozer cache:"
+            for apk in $APK_FILES; do
               echo "  - $apk ($(ls -lh "$apk" | awk '{print $5}'))"
               cp "$apk" "bin/$(basename "$apk")"
-              cp "$apk" "bin/voltmatic-app-found.apk"
+              cp "$apk" "bin/voltmatic-app-buildozer.apk"
               APK_FOUND=true
             done
           else
@@ -449,46 +490,15 @@ jobs:
               if [ -n "$RELEASE_APKS" ]; then
                 echo "=== APK found after release build ==="
                 for apk in $RELEASE_APKS; do
+                  echo "Found: $apk"
+                  cp "$apk" "bin/$(basename "$apk")"
+                  cp "$apk" "bin/voltmatic-app-release-build.apk"
+                  APK_FOUND=true
                 done
-
-                if [ -n "$RESOURCES" ]; then
-                  cp "$RESOURCES" resources.arsc
-                fi
-
-                # Create basic APK using aapt
-                echo "Creating APK with aapt..."
-                if command -v aapt >/dev/null 2>&1; then
-                  aapt package -f -M AndroidManifest.xml -I $ANDROID_HOME/platforms/android-30/android.jar -F ../bin/voltmatic-app-manual.apk .
-
-                  # Sign the APK
-                  if command -v jarsigner >/dev/null 2>&1; then
-                    echo "Signing APK..."
-                    # Create debug keystore if it doesn't exist
-                    if [ ! -f ~/.android/debug.keystore ]; then
-                      mkdir -p ~/.android
-                      keytool -genkey -v -keystore ~/.android/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-                    fi
-
-                    jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore ~/.android/debug.keystore -storepass android -keypass android ../bin/voltmatic-app-manual.apk androiddebugkey
-
-                    # Align the APK
-                    if command -v zipalign >/dev/null 2>&1; then
-                      zipalign -v 4 ../bin/voltmatic-app-manual.apk ../bin/voltmatic-app-aligned.apk
-                      mv ../bin/voltmatic-app-aligned.apk ../bin/voltmatic-app.apk
-                    else
-                      mv ../bin/voltmatic-app-manual.apk ../bin/voltmatic-app.apk
-                    fi
-
-                    APK_FOUND=true
-                    echo "SUCCESS: Manual APK creation completed!"
-                  else
-                    echo "jarsigner not available, creating unsigned APK"
-                    mv ../bin/voltmatic-app-manual.apk ../bin/voltmatic-app-unsigned.apk
-                    APK_FOUND=true
-                  fi
-                else
-                  echo "aapt not available for manual APK creation"
-                fi
+              fi
+            fi
+          fi
+        fi
         if [ "$APK_FOUND" = true ]; then
           echo "SUCCESS: APK files successfully located and copied!"
           echo "Contents of bin directory:"
