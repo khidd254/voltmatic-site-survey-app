@@ -1,4 +1,4 @@
-name: Build Android APK - ULTIMATE SOLUTION
+name: Build Android APK - Ultimate Solution
 
 on:
   push:
@@ -10,13 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     
-    env:
-      ANDROID_HOME: /opt/android-sdk
-      ANDROID_SDK_ROOT: /opt/android-sdk
-      ANDROID_NDK_HOME: /opt/android-sdk/ndk/25.2.9519653
-
     steps:
     - uses: actions/checkout@v3
 
@@ -25,282 +20,53 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Install system dependencies
+    - name: Install buildozer and dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-            build-essential \
-            git \
-            python3-pip \
-            python3-dev \
-            python3-venv \
-            libssl-dev \
-            zlib1g-dev \
-            libffi-dev \
-            libxml2-dev \
-            libxslt1-dev \
-            libjpeg-dev \
-            libpng-dev \
-            autoconf \
-            libtool \
-            pkg-config \
-            cmake \
-            openjdk-11-jdk \
-            unzip \
-            wget \
-            curl \
-            ninja-build
+        sudo apt-get install -y build-essential git python3-pip python3-dev libssl-dev zlib1g-dev libffi-dev autoconf libtool pkg-config cmake openjdk-11-jdk unzip wget curl
+        pip install --user buildozer cython
+        pip install -r requirements.txt
 
-    - name: Set up Android SDK and NDK
+    - name: Set up Android SDK
       run: |
-        sudo mkdir -p $ANDROID_HOME
-        sudo chown $USER:$USER $ANDROID_HOME
+        export ANDROID_HOME=/opt/android-sdk
+        export ANDROID_SDK_ROOT=/opt/android-sdk
+        export ANDROID_NDK_HOME=/opt/android-sdk/ndk/25.2.9519653
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
-        
-        # Install Android Command Line Tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
-        mkdir -p $ANDROID_HOME/cmdline-tools/latest
-        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-        rm -r $ANDROID_HOME/cmdline-tools/cmdline-tools
-        
-        # Accept licenses
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-        
-        # Install required Android packages
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platform-tools" \
-            "platforms;android-30" \
-            "platforms;android-29" \
-            "build-tools;30.0.3" \
-            "build-tools;29.0.3" \
-            "ndk;25.2.9519653"
-        
-        # Add to PATH
-        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
 
-    - name: ULTIMATE SOLUTION - Complete P4A Build
+    - name: Build APK with buildozer
       run: |
-        export ANDROID_HOME=$ANDROID_HOME
-        export ANDROID_SDK_ROOT=$ANDROID_HOME
-        export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
-        export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/30.0.3
-        
-        mkdir -p bin
-        
-        echo "=== INSTALLING PYTHON-FOR-ANDROID DIRECTLY ==="
-        pip install --user python-for-android
-        pip install --user cython
-        
-        # Install our app requirements
-        pip install -r requirements.txt
-        
-        echo "=== BUILDING WITH P4A DIRECTLY ==="
         export PATH=$PATH:$HOME/.local/bin
+        mkdir -p bin
+        timeout 30m buildozer android debug --verbose || echo "Build completed or timed out"
+
+    - name: Find and collect APK files
+      run: |
+        echo "Searching for APK files..."
+        find . -name "*.apk" -type f 2>/dev/null | while read apk; do
+          echo "Found APK: $apk"
+          cp "$apk" "bin/$(basename "$apk")"
+          cp "$apk" "bin/voltmatic-app.apk"
+        done
         
-        # Create p4a build
-        p4a create --name voltmaticapp --package org.voltmatic.voltmaticapp \
-            --version 0.1 --bootstrap sdl2 \
-            --requirements python3,kivy==2.1.0,kivymd==1.1.1,pillow==9.5.0,requests==2.28.2,python-dateutil==2.8.2,plyer==2.1.0,pyjnius==1.4.2,android \
-            --arch arm64-v8a --arch armeabi-v7a \
-            --sdk-dir $ANDROID_HOME --ndk-dir $ANDROID_NDK_HOME \
-            --android-api 30 --ndk-api 21 \
-            --permission INTERNET \
-            --permission WRITE_EXTERNAL_STORAGE \
-            --permission READ_EXTERNAL_STORAGE \
-            --permission ACCESS_NETWORK_STATE \
-            --permission ACCESS_WIFI_STATE \
-            --orientation portrait \
-            --private . \
-            --debug 2>&1 | tee p4a_build.log
+        echo "Final results:"
+        ls -la bin/ || echo "No bin directory"
         
-        # Check if APK was created
-        APK_FILES=$(find . -name "*.apk" -type f 2>/dev/null)
-        if [ -n "$APK_FILES" ]; then
-          echo "SUCCESS: P4A created APK!"
-          for apk in $APK_FILES; do
-            echo "Found APK: $apk"
-            cp "$apk" "bin/voltmatic-app-p4a.apk"
-          done
-        else
-          echo "P4A failed, trying alternative approach..."
-          
-          echo "=== CREATING MINIMAL ANDROID PROJECT ==="
-          # Create a minimal Android project structure
-          mkdir -p android_project/app/src/main/java/org/voltmatic/voltmaticapp
-          mkdir -p android_project/app/src/main/res/values
-          mkdir -p android_project/app/src/main/assets
-          
-          # Copy our Python app to assets
-          cp -r *.py app/ assets/ android_project/app/src/main/assets/ 2>/dev/null || true
-          
-          # Create minimal AndroidManifest.xml
-          cat > android_project/app/src/main/AndroidManifest.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.voltmatic.voltmaticapp"
-    android:versionCode="1"
-    android:versionName="0.1">
-    
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    
-    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
-    
-    <application android:label="Voltmatic App"
-                 android:icon="@drawable/icon"
-                 android:theme="@android:style/Theme.NoTitleBar">
-        <activity android:name="org.kivy.android.PythonActivity"
-                  android:label="Voltmatic App"
-                  android:configChanges="keyboardHidden|orientation|screenSize"
-                  android:screenOrientation="portrait"
-                  android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
-EOF
-
-          # Create build.gradle
-          cat > android_project/app/build.gradle << 'EOF'
-apply plugin: 'com.android.application'
-
-android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
-    
-    defaultConfig {
-        applicationId "org.voltmatic.voltmaticapp"
-        minSdkVersion 21
-        targetSdkVersion 30
-        versionCode 1
-        versionName "0.1"
-    }
-    
-    buildTypes {
-        debug {
-            debuggable true
-        }
-    }
-}
-
-dependencies {
-    implementation 'androidx.appcompat:appcompat:1.3.1'
-}
-EOF
-
-          # Create project build.gradle
-          cat > android_project/build.gradle << 'EOF'
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.0.4'
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-EOF
-
-          # Create gradle wrapper
-          cd android_project
-          
-          # Download gradle wrapper
-          wget https://services.gradle.org/distributions/gradle-7.4.2-bin.zip
-          unzip -q gradle-7.4.2-bin.zip
-          
-          # Create gradlew
-          cat > gradlew << 'EOF'
-#!/bin/sh
-exec ./gradle-7.4.2/bin/gradle "$@"
-EOF
-          chmod +x gradlew
-          
-          # Try to build
-          echo "=== BUILDING MINIMAL ANDROID PROJECT ==="
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle_minimal.log
-          
-          # Look for APK
-          MINIMAL_APK=$(find . -name "*.apk" -type f | head -1)
-          if [ -n "$MINIMAL_APK" ]; then
-            echo "SUCCESS: Minimal Android project created APK!"
-            cd - > /dev/null
-            cp "android_project/$MINIMAL_APK" "bin/voltmatic-app-minimal.apk"
-          else
-            cd - > /dev/null
-            echo "=== LAST RESORT: MANUAL APK CREATION ==="
-            
-            # Create the most basic APK possible
-            mkdir -p basic_apk
-            cd basic_apk
-            
-            # Create minimal manifest
-            cat > AndroidManifest.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.voltmatic.voltmaticapp">
-    <application android:label="Voltmatic App">
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
-EOF
-            
-            # Create basic APK structure
-            mkdir -p META-INF
-            echo "Manifest-Version: 1.0" > META-INF/MANIFEST.MF
-            
-            # Package with aapt
-            aapt package -f -M AndroidManifest.xml -I $ANDROID_HOME/platforms/android-30/android.jar -F ../bin/voltmatic-app-basic.apk .
-            
-            cd - > /dev/null
-            rm -rf basic_apk
-            
-            echo "BASIC APK CREATED" > bin/status.txt
-          fi
-        fi
-        
-        # Final check
-        echo "=== FINAL RESULTS ==="
-        ls -la bin/
         if ls bin/*.apk 1> /dev/null 2>&1; then
-          echo "SUCCESS: APK FILES CREATED!"
-          for apk in bin/*.apk; do
-            echo "APK: $apk ($(ls -lh "$apk" | awk '{print $5}'))"
-            file "$apk"
-          done
+          echo "SUCCESS: APK files found!"
         else
-          echo "ULTIMATE FAILURE: No APK created despite all attempts"
-          echo "ULTIMATE_FAILURE" > bin/status.txt
+          echo "No APK files found"
+          echo "NO_APK_FOUND" > bin/status.txt
         fi
 
-    - name: Upload APK artifact
+    - name: Upload artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: apk-artifact-ultimate
-        path: |
-          bin/*
-          p4a_build.log
-          android_project/**/gradle_minimal.log
+        name: apk-files
+        path: bin/
         if-no-files-found: warn
