@@ -35,6 +35,12 @@ android.sdk_path = /opt/android-sdk
 android.private_storage = True
 android.accept_sdk_license = True
 
+# Build tools configuration
+android.gradle_dependencies = 
+android.add_compile_options = 
+android.add_gradle_repositories = 
+android.gradle_repositories = google(), mavenCentral()
+
 # Kivy configuration
 android.entrypoint = org.kivy.android.PythonActivity
 android.enable_androidx = True

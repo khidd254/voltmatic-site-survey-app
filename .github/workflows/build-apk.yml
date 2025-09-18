@@ -92,12 +92,17 @@ jobs:
         # Accept licenses
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
         
-        # Install required Android packages
+        # Install required Android packages including multiple build-tools versions
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
             "platform-tools" \
             "platforms;android-30" \
+            "platforms;android-29" \
             "build-tools;30.0.3" \
-            "ndk;25.2.9519653"
+            "build-tools;29.0.3" \
+            "build-tools;28.0.3" \
+            "ndk;25.2.9519653" \
+            "extras;android;m2repository" \
+            "extras;google;m2repository"
         
         # Create legacy tools directory structure for buildozer compatibility
         mkdir -p $ANDROID_HOME/tools/bin
@@ -113,6 +118,14 @@ jobs:
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
         echo "$ANDROID_HOME/tools/bin" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
+        
+        # Verify critical APK building tools are available
+        echo "=== Verifying APK building tools ==="
+        ls -la $ANDROID_HOME/build-tools/30.0.3/ || echo "Build tools not found"
+        which aapt || echo "aapt not found in PATH"
+        which zipalign || echo "zipalign not found in PATH"
+        which apksigner || echo "apksigner not found in PATH"
 
     - name: Configure buildozer to use pre-installed SDK/NDK
       run: |
@@ -441,6 +454,39 @@ jobs:
                   cp "$apk" "bin/voltmatic-app-release.apk"
                   APK_FOUND=true
                 done
+              else
+                # Manual APK assembly as last resort
+                echo "=== Attempting manual APK assembly ==="
+                
+                # Look for gradle build outputs that might contain unsigned APKs
+                GRADLE_OUTPUTS=$(find .buildozer/android/platform -name "*.apk" -o -name "app-debug.apk" -o -name "app-release.apk" -o -name "*unsigned*.apk" 2>/dev/null)
+                
+                if [ -n "$GRADLE_OUTPUTS" ]; then
+                  echo "Found gradle build outputs:"
+                  for gradle_apk in $GRADLE_OUTPUTS; do
+                    echo "  - $gradle_apk"
+                    cp "$gradle_apk" "bin/$(basename "$gradle_apk")"
+                    cp "$gradle_apk" "bin/voltmatic-app-gradle.apk"
+                    APK_FOUND=true
+                  done
+                else
+                  # Try to find any Android build artifacts
+                  echo "Searching for any Android build artifacts..."
+                  
+                  # Look for dex files, resources, etc. that indicate successful compilation
+                  DEX_FILES=$(find .buildozer/android/platform -name "*.dex" 2>/dev/null | head -3)
+                  if [ -n "$DEX_FILES" ]; then
+                    echo "Found compiled dex files - build succeeded but APK packaging failed:"
+                    for dex in $DEX_FILES; do
+                      echo "  - $dex"
+                    done
+                    
+                    # Create a status file indicating the issue
+                    echo "BUILD_SUCCEEDED_APK_PACKAGING_FAILED" > bin/build_status.txt
+                    echo "Compiled dex files found but APK packaging failed" >> bin/build_status.txt
+                    echo "This indicates a buildozer APK assembly issue" >> bin/build_status.txt
+                  fi
+                fi
               fi
             fi
           fi
