@@ -449,51 +449,46 @@ jobs:
               if [ -n "$RELEASE_APKS" ]; then
                 echo "=== APK found after release build ==="
                 for apk in $RELEASE_APKS; do
-                  echo "Found: $apk"
-                  cp "$apk" "bin/$(basename "$apk")"
-                  cp "$apk" "bin/voltmatic-app-release.apk"
-                  APK_FOUND=true
                 done
-              else
-                # Manual APK assembly as last resort
-                echo "=== Attempting manual APK assembly ==="
-                
-                # Look for gradle build outputs that might contain unsigned APKs
-                GRADLE_OUTPUTS=$(find .buildozer/android/platform -name "*.apk" -o -name "app-debug.apk" -o -name "app-release.apk" -o -name "*unsigned*.apk" 2>/dev/null)
-                
-                if [ -n "$GRADLE_OUTPUTS" ]; then
-                  echo "Found gradle build outputs:"
-                  for gradle_apk in $GRADLE_OUTPUTS; do
-                    echo "  - $gradle_apk"
-                    cp "$gradle_apk" "bin/$(basename "$gradle_apk")"
-                    cp "$gradle_apk" "bin/voltmatic-app-gradle.apk"
-                    APK_FOUND=true
-                  done
-                else
-                  # Try to find any Android build artifacts
-                  echo "Searching for any Android build artifacts..."
-                  
-                  # Look for dex files, resources, etc. that indicate successful compilation
-                  DEX_FILES=$(find .buildozer/android/platform -name "*.dex" 2>/dev/null | head -3)
-                  if [ -n "$DEX_FILES" ]; then
-                    echo "Found compiled dex files - build succeeded but APK packaging failed:"
-                    for dex in $DEX_FILES; do
-                      echo "  - $dex"
-                    done
-                    
-                    # Create a status file indicating the issue
-                    echo "BUILD_SUCCEEDED_APK_PACKAGING_FAILED" > bin/build_status.txt
-                    echo "Compiled dex files found but APK packaging failed" >> bin/build_status.txt
-                    echo "This indicates a buildozer APK assembly issue" >> bin/build_status.txt
-                  fi
+
+                if [ -n "$RESOURCES" ]; then
+                  cp "$RESOURCES" resources.arsc
                 fi
-              fi
-            fi
-          fi
-        fi
-        
-        # Final verification and summary
-        echo "=== Final APK Verification ==="
+
+                # Create basic APK using aapt
+                echo "Creating APK with aapt..."
+                if command -v aapt >/dev/null 2>&1; then
+                  aapt package -f -M AndroidManifest.xml -I $ANDROID_HOME/platforms/android-30/android.jar -F ../bin/voltmatic-app-manual.apk .
+
+                  # Sign the APK
+                  if command -v jarsigner >/dev/null 2>&1; then
+                    echo "Signing APK..."
+                    # Create debug keystore if it doesn't exist
+                    if [ ! -f ~/.android/debug.keystore ]; then
+                      mkdir -p ~/.android
+                      keytool -genkey -v -keystore ~/.android/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+                    fi
+
+                    jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore ~/.android/debug.keystore -storepass android -keypass android ../bin/voltmatic-app-manual.apk androiddebugkey
+
+                    # Align the APK
+                    if command -v zipalign >/dev/null 2>&1; then
+                      zipalign -v 4 ../bin/voltmatic-app-manual.apk ../bin/voltmatic-app-aligned.apk
+                      mv ../bin/voltmatic-app-aligned.apk ../bin/voltmatic-app.apk
+                    else
+                      mv ../bin/voltmatic-app-manual.apk ../bin/voltmatic-app.apk
+                    fi
+
+                    APK_FOUND=true
+                    echo "SUCCESS: Manual APK creation completed!"
+                  else
+                    echo "jarsigner not available, creating unsigned APK"
+                    mv ../bin/voltmatic-app-manual.apk ../bin/voltmatic-app-unsigned.apk
+                    APK_FOUND=true
+                  fi
+                else
+                  echo "aapt not available for manual APK creation"
+                fi
         if [ "$APK_FOUND" = true ]; then
           echo "SUCCESS: APK files successfully located and copied!"
           echo "Contents of bin directory:"
